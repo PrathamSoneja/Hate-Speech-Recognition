@@ -1,10 +1,6 @@
 # import dependencies
 ##sklearn libs
 import contractions
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
 ##nlp libs
 from nltk.tokenize import RegexpTokenizer
 import spacy
@@ -15,28 +11,16 @@ nltk.download('stopwords')
 sp = spacy.load('en_core_web_sm')
 # essential libs
 import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
-import seaborn as sns
 import regex as re
 import numpy as np
 import warnings
+import pickle
 
 warnings.filterwarnings('ignore')
 
-plt.style.use('seaborn')
-
-
-df_red = pd.read_csv('reddit_all.csv')
-df_gab = pd.read_csv('gab_clean.csv')
-df_red.drop('Unnamed: 0', axis=1, inplace=True)
-df_gab.drop('Unnamed: 0', axis=1, inplace=True)
-df_red['red'] = 1
-df_gab['red'] = 0
-
-df = df_red.append(df_gab, ignore_index=True)
-
 stopwords_nltk =  set(stopwords.words('english'))
+logreg = pickle.load(open('LRmodel.sav', 'rb'))
+vectoriser = pickle.load(open('TFIDFVectoriser.sav', 'rb'))
 
 def cleaning_text(x):
   #preprocessing of text
@@ -94,29 +78,7 @@ def preprocess(text):
   tok_lemma = token_lemma(tokens)
   return [clean_text, tokens, lemma, tok_lemma]
 
-temp = pd.DataFrame(columns = ['clean_text','tokens','lemma','tok_lemma'])
-for i in range(len(df['text'])):
-  temp.loc[len(temp.index), ] = preprocess(df['text'][i])
 
-dataset = pd.concat([df[['text','hate']], temp], axis = 1)
-dataset.drop_duplicates(subset=['lemma'], inplace=True)
-data = dataset[['tok_lemma','hate']]
-
-X = data['tok_lemma']
-y = data['hate']
-
-X_train, X_test, y_train, y_test = train_test_split(X, y, stratify=y, random_state=28, test_size = 0.33)
-
-vectoriser = TfidfVectorizer(ngram_range=(1,2), max_features=500000, min_df = 3)
-logreg = LogisticRegression(C = 2, n_jobs = -1, max_iter = 1000)
-
-X_train_tfidf = vectoriser.fit_transform(X_train)
-X_test_tfidf = vectoriser.transform(X_test)
-
-logreg.fit(X_train_tfidf, y_train)
-pred_lr = logreg.predict(X_test_tfidf)
-
-accuracy = np.round(accuracy_score(y_test, pred_lr), 4)
 
 def predict(text):
     temp = preprocess(text)
